@@ -15,6 +15,7 @@
     'data': [
         'security/ir.model.access.csv',
         'data/mail_template.xml',
+        'data/ir_cron.xml',
         'views/saas_instance_views.xml',
         'views/product_template_views.xml',
         'views/sale_order_views.xml',

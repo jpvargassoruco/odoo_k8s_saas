@@ -112,3 +112,51 @@ class SaasInstance(models.Model):
             self.message_post(body="🗑 Instance deleted from K3s.")
         except Exception as e:
             self.message_post(body=f"⚠ Delete request failed: {e}")
+
+    def action_refresh_status(self):
+        """Check instance status via portal API and update state."""
+        self.ensure_one()
+        self._check_portal_status()
+
+    def _check_portal_status(self):
+        """Query the portal API for pod status and update the record."""
+        import requests as req
+        portal_url, api_key = self._get_portal_config()
+        if not api_key:
+            return
+        try:
+            r = req.get(
+                f"{portal_url}/api/instances/{self.name}",
+                headers={'X-API-Key': api_key},
+                timeout=15,
+            )
+            if r.status_code == 404:
+                if self.state == 'provisioning':
+                    self.write({'state': 'error', 'error_message': 'Instance not found on portal'})
+                return
+            r.raise_for_status()
+            data = r.json()
+            pods = data.get('pods', [])
+            if pods:
+                pod = pods[0]
+                phase = pod.get('phase', '').lower()
+                ready = pod.get('ready', False)
+                if phase == 'running' and ready:
+                    if self.state != 'running':
+                        self.write({'state': 'running', 'error_message': False})
+                        self.message_post(body="✅ Instance is running.")
+                elif phase in ('failed', 'unknown'):
+                    if self.state != 'error':
+                        self.write({'state': 'error', 'error_message': f"Pod phase: {phase}"})
+            self.write({'portal_response': r.text})
+        except Exception as e:
+            # Don't change state on transient network errors
+            self.write({'portal_response': f"Status check failed: {e}"})
+
+    @api.model
+    def _cron_check_provisioning(self):
+        """Cron: poll portal for all instances stuck in 'provisioning' state."""
+        instances = self.search([('state', '=', 'provisioning')])
+        for inst in instances:
+            inst._check_portal_status()
+

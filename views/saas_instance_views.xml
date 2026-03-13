@@ -9,6 +9,8 @@
                 <header>
                     <button name="action_provision" string="Provision" type="object"
                             class="btn-primary" invisible="state != 'draft'"/>
+                    <button name="action_refresh_status" string="↻ Refresh Status" type="object"
+                            class="btn-secondary" invisible="state not in ('provisioning','running')"/>
                     <button name="action_open_instance" string="Open Instance ↗" type="object"
                             class="btn-secondary" invisible="not url"/>
                     <button name="action_cancel" string="Cancel &amp; Delete" type="object"
