@@ -23,6 +23,7 @@
                 </page>
             </notebook>
             <field name="name" position="after">
+                <label for="is_saas_plan"/>
                 <field name="is_saas_plan" widget="boolean_toggle"/>
             </field>
         </field>
