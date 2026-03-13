@@ -30,8 +30,7 @@
                             <field name="partner_id"/>
                         </group>
                         <group string="Provisioning">
-                            <field name="db_template_selection"/>
-                            <field name="db_template" placeholder="or type key manually, e.g. v18/starter.dump"/>
+                            <field name="db_backup"/>
                             <field name="addons_repo"/>
                             <field name="custom_image"/>
                             <field name="workers"/>

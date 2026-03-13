@@ -25,11 +25,11 @@ class SaasInstance(models.Model):
     sale_order_id = fields.Many2one('sale.order', string='Sale Order', ondelete='set null')
     product_id = fields.Many2one('product.product', string='Plan')
 
-    db_template = fields.Char('DB Template', help='Key from portal S3 templates, e.g. v18/starter.dump')
-    db_template_selection = fields.Selection(
+    db_backup = fields.Selection(
         selection='_get_db_template_selection',
-        string='DB Template (Select)',
-        help='Choose a template from the portal — refreshes on save',
+        string='DB Backup (ZIP)',
+        help='Select an Odoo ZIP backup to restore into this new instance. '
+             'Upload backups via Settings → Technical → Database → Backup → ZIP format.',
     )
     addons_repo = fields.Char('Addons Git Repo', help='https://github.com/org/repo.git')
     custom_image = fields.Char('Custom Image', help='e.g. ghcr.io/org/odoo-custom:18')
@@ -72,7 +72,7 @@ class SaasInstance(models.Model):
 
     @api.model
     def _get_db_template_selection(self):
-        """Fetch available DB templates from the portal API."""
+        """Fetch available ZIP backup templates from the portal API."""
         import requests as req
         try:
             portal_url, api_key = self._get_portal_config()
@@ -82,15 +82,18 @@ class SaasInstance(models.Model):
                         headers={'X-API-Key': api_key}, timeout=5)
             r.raise_for_status()
             templates = r.json().get('templates', [])
-            return [(t['key'], f"{t['key']} ({t['size_mb']} MB)") for t in templates]
+            # Portal already filters to .zip — but filter here too for safety
+            return [
+                (t['key'], f"{t['key']} ({t['size_mb']} MB)")
+                for t in templates if t['key'].endswith('.zip')
+            ]
         except Exception:
             return []
 
     def _provision_via_portal(self):
         import requests as req
         portal_url, api_key = self._get_portal_config()
-        # Use db_template_selection if db_template (free text) is empty
-        template_key = self.db_template or self.db_template_selection or None
+        template_key = self.db_backup or None
         # admin_passwd defaults to db_password so instance always has a known master password
         master_pass = self.admin_passwd or self.db_password or 'odoo'
         payload = {
