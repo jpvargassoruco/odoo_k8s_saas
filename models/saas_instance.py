@@ -25,13 +25,22 @@ class SaasInstance(models.Model):
     sale_order_id = fields.Many2one('sale.order', string='Sale Order', ondelete='set null')
     product_id = fields.Many2one('product.product', string='Plan')
 
-    db_template = fields.Char('DB Template', help='e.g. v18/starter.dump — path in Ceph RGW S3')
+    db_template = fields.Char('DB Template', help='Key from portal S3 templates, e.g. v18/starter.dump')
+    db_template_selection = fields.Selection(
+        selection='_get_db_template_selection',
+        string='DB Template (Select)',
+        help='Choose a template from the portal — refreshes on save',
+    )
     addons_repo = fields.Char('Addons Git Repo', help='https://github.com/org/repo.git')
     custom_image = fields.Char('Custom Image', help='e.g. ghcr.io/org/odoo-custom:18')
     db_password = fields.Char('DB Password', default='odoo', groups='base.group_system')
 
     workers = fields.Integer('Workers', default=2)
-    admin_passwd = fields.Char('Admin Password', groups='base.group_system')
+    admin_passwd = fields.Char(
+        'Master Password',
+        groups='base.group_system',
+        help='Master password for this instance\'s database manager. Defaults to DB Password if empty.',
+    )
 
     portal_response = fields.Text('Last Portal Response', readonly=True)
     error_message = fields.Text('Error', readonly=True)
@@ -61,20 +70,40 @@ class SaasInstance(models.Model):
         api_key = get('saas.api_key', '')
         return portal_url, api_key
 
+    @api.model
+    def _get_db_template_selection(self):
+        """Fetch available DB templates from the portal API."""
+        import requests as req
+        try:
+            portal_url, api_key = self._get_portal_config()
+            if not api_key:
+                return []
+            r = req.get(f"{portal_url}/api/templates",
+                        headers={'X-API-Key': api_key}, timeout=5)
+            r.raise_for_status()
+            templates = r.json().get('templates', [])
+            return [(t['key'], f"{t['key']} ({t['size_mb']} MB)") for t in templates]
+        except Exception:
+            return []
+
     def _provision_via_portal(self):
         import requests as req
         portal_url, api_key = self._get_portal_config()
+        # Use db_template_selection if db_template (free text) is empty
+        template_key = self.db_template or self.db_template_selection or None
+        # admin_passwd defaults to db_password so instance always has a known master password
+        master_pass = self.admin_passwd or self.db_password or 'odoo'
         payload = {
             'name': self.name,
             'domain': self.domain,
             'odoo_version': self.odoo_version,
             'db_password': self.db_password or 'odoo',
-            'db_template': self.db_template or None,
+            'db_template': template_key,
             'addons_repo': self.addons_repo or None,
             'image': self.custom_image or None,
             'odoo_conf_overrides': {
                 'workers': self.workers,
-                **(({'admin_passwd': self.admin_passwd}) if self.admin_passwd else {}),
+                'admin_passwd': master_pass,
             },
         }
         try:

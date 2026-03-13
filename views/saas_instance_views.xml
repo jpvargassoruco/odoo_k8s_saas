@@ -30,10 +30,13 @@
                             <field name="partner_id"/>
                         </group>
                         <group string="Provisioning">
-                            <field name="db_template"/>
+                            <field name="db_template_selection"/>
+                            <field name="db_template" placeholder="or type key manually, e.g. v18/starter.dump"/>
                             <field name="addons_repo"/>
                             <field name="custom_image"/>
                             <field name="workers"/>
+                            <field name="db_password"/>
+                            <field name="admin_passwd" placeholder="Leave empty to use DB Password"/>
                             <field name="sale_order_id" readonly="1"/>
                         </group>
                     </group>
