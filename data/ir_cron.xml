@@ -9,7 +9,6 @@
             <field name="code">model._cron_check_provisioning()</field>
             <field name="interval_number">2</field>
             <field name="interval_type">minutes</field>
-            <field name="numbercall">-1</field>
             <field name="active">True</field>
         </record>
     </data>
