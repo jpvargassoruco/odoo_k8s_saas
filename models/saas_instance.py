@@ -1,4 +1,4 @@
-from odoo import models, fields
+from odoo import models, fields, api
 
 class SaasInstance(models.Model):
     _name = 'saas.instance'
@@ -36,7 +36,7 @@ class SaasInstance(models.Model):
     portal_response = fields.Text('Last Portal Response', readonly=True)
     error_message = fields.Text('Error', readonly=True)
 
-    @fields.depends('domain')
+    @api.depends('domain')
     def _compute_url(self):
         for rec in self:
             rec.url = f"https://{rec.domain}" if rec.domain else ''
