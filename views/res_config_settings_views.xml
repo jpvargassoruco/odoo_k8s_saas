@@ -1,36 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Settings — SaaS Portal section -->
+    <!-- Settings — SaaS Portal section (Odoo 18 app/block/setting format) -->
     <record id="res_config_settings_view_saas" model="ir.ui.view">
         <field name="name">res.config.settings.saas</field>
         <field name="model">res.config.settings</field>
-        <field name="inherit_id" ref="base_setup.action_general_configuration"/>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
         <field name="arch" type="xml">
-            <div id="saas_settings" position="before">
-                <h2>SaaS Provisioning Portal</h2>
-                <div class="row mt16 o_settings_container">
-                    <div class="col-12 col-lg-6 o_setting_box">
-                        <div class="o_setting_left_pane"/>
-                        <div class="o_setting_right_pane">
-                            <span class="o_form_label">Portal URL</span>
-                            <div class="text-muted">The base URL of the SaaS provisioning portal</div>
-                            <div class="content-group">
-                                <field name="saas_portal_url" class="o_input"/>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-12 col-lg-6 o_setting_box">
-                        <div class="o_setting_left_pane"/>
-                        <div class="o_setting_right_pane">
-                            <span class="o_form_label">API Key</span>
-                            <div class="text-muted">X-API-Key header value for portal authentication</div>
-                            <div class="content-group">
-                                <field name="saas_api_key" password="True" class="o_input"/>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <xpath expr="//form" position="inside">
+                <app data-string="SaaS Portal" string="SaaS Portal" name="odoo_k8s_saas" groups="base.group_system">
+                    <block title="SaaS Provisioning Portal" name="saas_portal_settings">
+                        <setting string="Portal URL" help="The base URL of the SaaS provisioning portal">
+                            <field name="saas_portal_url"/>
+                        </setting>
+                        <setting string="API Key" help="X-API-Key header value for portal authentication">
+                            <field name="saas_api_key" password="True"/>
+                        </setting>
+                    </block>
+                </app>
+            </xpath>
         </field>
     </record>
 </odoo>
