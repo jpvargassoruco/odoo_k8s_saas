@@ -34,9 +34,13 @@
                             <field name="addons_repo"/>
                             <field name="custom_image"/>
                             <field name="workers"/>
-                            <field name="db_password"/>
-                            <field name="admin_passwd" placeholder="Leave empty to use DB Password"/>
                             <field name="sale_order_id" readonly="1"/>
+                        </group>
+                        <group string="Credentials (required)">
+                            <field name="admin_passwd" password="True"/>
+                            <field name="admin_email" placeholder="admin@company.com"/>
+                            <field name="admin_password" password="True" placeholder="Initial admin password"/>
+                            <field name="lang"/>
                         </group>
                     </group>
                     <group string="Error" invisible="not error_message">

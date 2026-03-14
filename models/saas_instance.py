@@ -28,8 +28,7 @@ class SaasInstance(models.Model):
     db_backup = fields.Selection(
         selection='_get_db_template_selection',
         string='DB Backup (ZIP)',
-        help='Select an Odoo ZIP backup to restore into this new instance. '
-             'Upload backups via Settings → Technical → Database → Backup → ZIP format.',
+        help='Select an Odoo ZIP backup to restore. Leave empty for a fresh Odoo install.',
     )
     addons_repo = fields.Char('Addons Git Repo', help='https://github.com/org/repo.git')
     custom_image = fields.Char('Custom Image', help='e.g. ghcr.io/org/odoo-custom:18')
@@ -38,8 +37,28 @@ class SaasInstance(models.Model):
     workers = fields.Integer('Workers', default=2)
     admin_passwd = fields.Char(
         'Master Password',
-        groups='base.group_system',
-        help='Master password for this instance\'s database manager. Defaults to DB Password if empty.',
+        required=True,
+        help='Odoo database manager master password for this instance.',
+    )
+    admin_email = fields.Char(
+        'Admin Email',
+        required=True,
+        help='Login email for the Odoo admin user (used for fresh installs).',
+    )
+    admin_password = fields.Char(
+        'Admin Password',
+        required=True,
+        help='Initial password for the Odoo admin user (used for fresh installs).',
+    )
+    lang = fields.Selection(
+        selection=[
+            ('en_US', 'English (US)'),
+            ('es_ES', 'Spanish (ES)'),
+            ('es_BO', 'Spanish (BO)'),
+            ('pt_BR', 'Portuguese (BR)'),
+        ],
+        string='Language',
+        default='en_US',
     )
 
     portal_response = fields.Text('Last Portal Response', readonly=True)
@@ -94,19 +113,21 @@ class SaasInstance(models.Model):
         import requests as req
         portal_url, api_key = self._get_portal_config()
         template_key = self.db_backup or None
-        # admin_passwd defaults to db_password so instance always has a known master password
-        master_pass = self.admin_passwd or self.db_password or 'odoo'
+        master_pass = self.admin_passwd
         payload = {
             'name': self.name,
             'domain': self.domain,
             'odoo_version': self.odoo_version,
             'db_password': self.db_password or 'odoo',
             'db_template': template_key,
-            'addons_repo': self.addons_repo or None,
+            'admin_passwd': self.admin_passwd,
+            'admin_email': self.admin_email,
+            'admin_password': self.admin_password,
+            'lang': self.lang or 'en_US',
+            'addons_repos': [{'url': self.addons_repo}] if self.addons_repo else [],
             'image': self.custom_image or None,
             'odoo_conf_overrides': {
                 'workers': self.workers,
-                'admin_passwd': master_pass,
             },
         }
         try:
