@@ -1,4 +1,7 @@
 from odoo import models, fields, api
+import logging
+
+_logger = logging.getLogger(__name__)
 
 class SaasInstance(models.Model):
     _name = 'saas.instance'
@@ -75,8 +78,30 @@ class SaasInstance(models.Model):
         return {'type': 'ir.actions.act_url', 'url': self.url, 'target': 'new'}
 
     def action_provision(self):
+        """Mark as provisioning and dispatch via ir.cron (non-blocking).
+
+        OPTIMIZATION: The original used blocking requests.post() which tied up
+        an Odoo worker for up to 30s. Now we just write the state and let
+        ir.cron handle the actual API call in the background.
+        """
         self.ensure_one()
-        self._provision_via_portal()
+        self.write({'state': 'provisioning', 'error_message': False})
+        self.message_post(body="⏳ Provisioning queued — will be dispatched shortly.")
+        # Trigger the cron immediately
+        cron = self.env.ref('odoo_k8s_saas.ir_cron_provision_pending', raise_if_not_found=False)
+        if cron:
+            cron.sudo().method_direct_trigger()
+
+    @api.model
+    def _cron_provision_pending(self):
+        """Cron: provision all instances queued but not yet sent to portal."""
+        pending = self.search([('state', '=', 'provisioning'), ('portal_response', '=', False)])
+        for instance in pending:
+            try:
+                instance._provision_via_portal()
+            except Exception as e:
+                _logger.error("Failed to provision %s: %s", instance.name, e)
+                instance.write({'state': 'error', 'error_message': str(e)})
 
     def action_cancel(self):
         self.ensure_one()
@@ -209,8 +234,45 @@ class SaasInstance(models.Model):
 
     @api.model
     def _cron_check_provisioning(self):
-        """Cron: poll portal for all instances stuck in 'provisioning' state."""
-        instances = self.search([('state', '=', 'provisioning')])
-        for inst in instances:
-            inst._check_portal_status()
+        """Cron: poll portal for provisioning instances — uses list endpoint for efficiency.
+
+        OPTIMIZATION: single API call to /api/instances instead of N calls to /api/instances/{name}.
+        Also checks saas_status annotation for reliable provisioning detection.
+        """
+        provisioning = self.search([('state', '=', 'provisioning')])
+        if not provisioning:
+            return
+
+        import requests as req
+        portal_url, api_key = self._get_portal_config()
+        if not api_key:
+            return
+
+        try:
+            r = req.get(
+                f"{portal_url}/api/instances",
+                headers={'X-API-Key': api_key},
+                timeout=15,
+            )
+            r.raise_for_status()
+            portal_instances = {i['name']: i for i in r.json()}
+        except Exception as e:
+            _logger.warning("Could not fetch portal instances: %s", e)
+            return
+
+        for instance in provisioning:
+            portal_data = portal_instances.get(instance.name)
+            if not portal_data:
+                continue
+            saas_status = portal_data.get('saas_status', '')
+            pod_status = portal_data.get('pod_status', '')
+            if saas_status == 'ready' and pod_status == 'Running':
+                instance.write({'state': 'running', 'error_message': False})
+                instance.message_post(body="✅ Instance is running and accessible!")
+                template = self.env.ref(
+                    'odoo_k8s_saas.mail_template_instance_ready',
+                    raise_if_not_found=False,
+                )
+                if template:
+                    template.send_mail(instance.id, force_send=True)
 

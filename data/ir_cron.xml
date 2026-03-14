@@ -11,5 +11,17 @@
             <field name="interval_type">minutes</field>
             <field name="active">True</field>
         </record>
+
+        <!-- Cron: dispatch pending provisions every 1 minute -->
+        <record id="ir_cron_provision_pending" model="ir.cron">
+            <field name="name">SaaS: Provision Pending Instances</field>
+            <field name="model_id" ref="model_saas_instance"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_provision_pending()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">minutes</field>
+            <field name="active">True</field>
+            <field name="priority">5</field>
+        </record>
     </data>
 </odoo>
