@@ -41,9 +41,10 @@ class SaasInstance(models.Model):
         help='Odoo database manager master password for this instance.',
     )
     admin_email = fields.Char(
-        'Admin Email',
+        'Admin Login',
         required=True,
-        help='Login email for the Odoo admin user (used for fresh installs).',
+        help='Login username for the Odoo admin user. Can be any string (e.g. "admin", '
+             '"usuario") or an email. Used for fresh installs.',
     )
     admin_password = fields.Char(
         'Admin Password',
