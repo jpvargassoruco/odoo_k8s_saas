@@ -1,5 +1,6 @@
 from odoo import models, fields, api
 import re
+import secrets
 
 
 class ProductTemplate(models.Model):
@@ -87,6 +88,11 @@ class SaleOrder(models.Model):
             slug = f"{slug}-{self.id}"
             domain = f"{slug}{product.saas_domain_suffix or '.aeisoftware.com'}"
 
+        # Default admin credentials — customer can change these after provisioning.
+        # admin_email doubles as the Odoo login username.
+        admin_email = partner.email or f"{slug}@aeisoftware.com"
+        admin_password = secrets.token_urlsafe(12)
+
         instance = self.env['saas.instance'].create({
             'name': slug,
             'domain': domain,
@@ -94,10 +100,15 @@ class SaleOrder(models.Model):
             'partner_id': partner.id,
             'sale_order_id': self.id,
             'product_id': line.product_id.id,
-            'db_template': product.saas_db_template,
+            # 'db_template' was incorrect — the field is 'db_backup' on saas.instance
+            'db_backup': product.saas_db_template,
             'addons_repo': product.saas_addons_repo,
             'custom_image': product.saas_custom_image,
             'workers': product.saas_workers or 2,
+            # Required fields on saas.instance
+            'admin_passwd': secrets.token_urlsafe(16),  # Odoo master/manager password
+            'admin_email': admin_email,
+            'admin_password': admin_password,
         })
         line.saas_instance_id = instance
         instance.action_provision()
