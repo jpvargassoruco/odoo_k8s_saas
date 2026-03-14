@@ -73,6 +73,7 @@ class SaleOrder(models.Model):
 
     def _provision_saas_instance(self, line):
         """Create and provision a SaaS instance from a sale order line."""
+        import json as _json
         product = line.product_id.product_tmpl_id
         partner = self.partner_id
 
@@ -87,6 +88,11 @@ class SaleOrder(models.Model):
             slug = f"{slug}-{self.id}"
             domain = f"{slug}{product.saas_domain_suffix or '.aeisoftware.com'}"
 
+        # Build addons_repos JSON from product field
+        repos = []
+        if product.saas_addons_repo:
+            repos = [{"url": product.saas_addons_repo, "branch": None}]
+
         instance = self.env['saas.instance'].create({
             'name': slug,
             'domain': domain,
@@ -95,9 +101,12 @@ class SaleOrder(models.Model):
             'sale_order_id': self.id,
             'product_id': line.product_id.id,
             'db_template': product.saas_db_template,
-            'addons_repo': product.saas_addons_repo,
+            'addons_repos': _json.dumps(repos),
             'custom_image': product.saas_custom_image,
             'workers': product.saas_workers or 2,
+            'admin_passwd': 'changeme',  # Default — should be configured per plan
+            'admin_email': partner.email or 'admin@example.com',
+            'admin_password': 'changeme',  # Default — should be configured per plan
         })
         line.saas_instance_id = instance
         instance.action_provision()

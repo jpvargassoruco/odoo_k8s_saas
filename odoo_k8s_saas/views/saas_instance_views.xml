@@ -26,10 +26,18 @@
                             <field name="url" widget="url"/>
                             <field name="odoo_version"/>
                             <field name="partner_id"/>
+                            <field name="lang"/>
                         </group>
+                        <group string="Credentials">
+                            <field name="admin_passwd" password="True"/>
+                            <field name="admin_email"/>
+                            <field name="admin_password" password="True"/>
+                        </group>
+                    </group>
+                    <group>
                         <group string="Provisioning">
                             <field name="db_template"/>
-                            <field name="addons_repo"/>
+                            <field name="addons_repos"/>
                             <field name="custom_image"/>
                             <field name="workers"/>
                             <field name="sale_order_id" readonly="1"/>
