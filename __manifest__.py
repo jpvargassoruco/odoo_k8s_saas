@@ -11,6 +11,7 @@
         'sale',
         'mail',
         'portal',
+        'contract',
     ],
     'data': [
         'security/ir.model.access.csv',

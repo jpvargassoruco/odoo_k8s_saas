@@ -19,9 +19,19 @@
                            statusbar_visible="draft,provisioning,running,error"/>
                 </header>
                 <sheet>
+                    <!-- Smart buttons -->
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_contract" type="object"
+                                class="oe_stat_button" icon="fa-file-contract"
+                                invisible="contract_count == 0">
+                            <field name="contract_count" widget="statinfo" string="Contract"/>
+                        </button>
+                    </div>
                     <div class="oe_title">
                         <h1><field name="name" placeholder="instance-slug"/></h1>
                     </div>
+                    <!-- Hidden field needed for invisible domain on the button above -->
+                    <field name="contract_id" invisible="1"/>
                     <group>
                         <group string="Instance">
                             <field name="domain"/>
